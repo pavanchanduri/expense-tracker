@@ -30,6 +30,17 @@ def create_user(name, email, password):
         db.close()
 
 
+def get_user_by_email(email):
+    """Return the user row for the given email, or None if not found."""
+    db = get_db()
+    try:
+        return db.execute(
+            "SELECT * FROM users WHERE email = ?", (email,)
+        ).fetchone()
+    finally:
+        db.close()
+
+
 def init_db():
     """Create tables if they don't already exist."""
     db = get_db()

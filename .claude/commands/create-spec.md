@@ -40,11 +40,11 @@ Run `git branch` to list existing branches.
 If `branch_name` is already taken, append a number:
 `feature/registration-01`, `feature/registration-02` etc.
 
-## Step 4 — Switch to main and pull latest
+## Step 4 — Switch to master and pull latest
 Run:
 ```
-git checkout main
-git pull origin main
+git checkout master
+git pull origin master
 ```
 
 ## Step 5 — Create and switch to the feature branch

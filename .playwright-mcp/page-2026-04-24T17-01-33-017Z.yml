@@ -1,0 +1,70 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "◈ Spendly" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e5]: ◈
+        - generic [ref=e6]: Spendly
+      - generic [ref=e7]:
+        - link "Profile" [ref=e8] [cursor=pointer]:
+          - /url: /profile
+        - generic [ref=e9]: Demo User
+        - link "Sign out" [ref=e10] [cursor=pointer]:
+          - /url: /logout
+  - main [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: Free to use · No credit card needed
+      - heading "Track every rupee. Know where it goes." [level=1] [ref=e16]:
+        - text: Track every rupee.
+        - generic [ref=e17]: Know where it goes.
+      - paragraph [ref=e18]: Spendly helps you log expenses, spot patterns, and stay on budget — without the spreadsheet headache.
+      - generic [ref=e19]:
+        - link "Create free account" [ref=e20] [cursor=pointer]:
+          - /url: /register
+        - link "See how it works" [ref=e21] [cursor=pointer]:
+          - /url: "#"
+      - generic [ref=e22]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]: This month
+            - generic [ref=e30]: ₹18,240
+            - generic [ref=e31]: +12% vs last
+          - generic [ref=e32]:
+            - generic [ref=e33]: Budget left
+            - generic [ref=e34]: ₹6,760
+            - generic [ref=e35]: 43% remaining
+          - generic [ref=e36]:
+            - generic [ref=e37]: Transactions
+            - generic [ref=e38]: "34"
+            - generic [ref=e39]: this month
+        - generic [ref=e40]:
+          - generic [ref=e42]: Food
+          - generic [ref=e46]: Travel
+          - generic [ref=e50]: Bills
+    - generic [ref=e54]:
+      - generic [ref=e55]:
+        - generic [ref=e56]: ₹
+        - heading "Log expenses instantly" [level=3] [ref=e57]
+        - paragraph [ref=e58]: Add any expense in seconds. Category, amount, date, description — all in one simple form.
+      - generic [ref=e59]:
+        - generic [ref=e60]: ◎
+        - heading "Understand your patterns" [level=3] [ref=e61]
+        - paragraph [ref=e62]: See exactly where your money goes with category breakdowns and monthly summaries.
+      - generic [ref=e63]:
+        - generic [ref=e64]: ◷
+        - heading "Filter by time period" [level=3] [ref=e65]
+        - paragraph [ref=e66]: View your spending for any date range — last week, last month, or a custom period.
+    - generic [ref=e68]:
+      - heading "Ready to take control?" [level=2] [ref=e69]
+      - paragraph [ref=e70]: Join thousands of people who track their expenses with Spendly.
+      - link "Create free account" [ref=e71] [cursor=pointer]:
+        - /url: /register
+  - contentinfo [ref=e72]:
+    - generic [ref=e73]:
+      - generic [ref=e74]: ◈
+      - generic [ref=e75]: Spendly
+      - paragraph [ref=e76]: Track every rupee. Own your finances.
+      - link "Terms and Conditions" [ref=e77] [cursor=pointer]:
+        - /url: /terms
+      - link "Privacy Policy" [ref=e78] [cursor=pointer]:
+        - /url: /privacy

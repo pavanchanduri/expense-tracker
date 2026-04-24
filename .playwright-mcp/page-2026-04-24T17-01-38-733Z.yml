@@ -1,0 +1,133 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "◈ Spendly" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e5]: ◈
+        - generic [ref=e6]: Spendly
+      - generic [ref=e7]:
+        - link "Profile" [ref=e8] [cursor=pointer]:
+          - /url: /profile
+        - generic [ref=e9]: Demo User
+        - link "Sign out" [ref=e10] [cursor=pointer]:
+          - /url: /logout
+  - main [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: DU
+        - generic [ref=e16]:
+          - heading "Demo User" [level=1] [ref=e17]
+          - paragraph [ref=e18]:
+            - img [ref=e19]
+            - text: nitish@spendly.com
+          - paragraph [ref=e22]:
+            - img [ref=e23]
+            - text: Member since January 2025
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]: Total Spent
+          - generic [ref=e28]: ₹18,240
+          - generic [ref=e29]: all time
+        - generic [ref=e30]:
+          - generic [ref=e31]: Transactions
+          - generic [ref=e32]: "34"
+          - generic [ref=e33]: expenses logged
+        - generic [ref=e34]:
+          - generic [ref=e35]: Top Category
+          - generic [ref=e36]: Food
+          - generic [ref=e37]: highest spend
+      - generic [ref=e38]:
+        - heading "Recent Transactions" [level=2] [ref=e39]:
+          - img [ref=e40]
+          - text: Recent Transactions
+        - table [ref=e44]:
+          - rowgroup [ref=e45]:
+            - row "Date Description Category Amount" [ref=e46]:
+              - columnheader "Date" [ref=e47]
+              - columnheader "Description" [ref=e48]
+              - columnheader "Category" [ref=e49]
+              - columnheader "Amount" [ref=e50]
+          - rowgroup [ref=e51]:
+            - row "2025-04-15 Dinner with friends Food ₹450.00" [ref=e52]:
+              - cell "2025-04-15" [ref=e53]
+              - cell "Dinner with friends" [ref=e54]
+              - cell "Food" [ref=e55]:
+                - generic [ref=e56]: Food
+              - cell "₹450.00" [ref=e57]
+            - row "2025-04-13 Stationery Other ₹350.00" [ref=e58]:
+              - cell "2025-04-13" [ref=e59]
+              - cell "Stationery" [ref=e60]
+              - cell "Other" [ref=e61]:
+                - generic [ref=e62]: Other
+              - cell "₹350.00" [ref=e63]
+            - row "2025-04-11 New shoes Shopping ₹2,500.00" [ref=e64]:
+              - cell "2025-04-11" [ref=e65]
+              - cell "New shoes" [ref=e66]
+              - cell "Shopping" [ref=e67]:
+                - generic [ref=e68]: Shopping
+              - cell "₹2,500.00" [ref=e69]
+            - row "2025-04-09 Movie tickets Entertainment ₹500.00" [ref=e70]:
+              - cell "2025-04-09" [ref=e71]
+              - cell "Movie tickets" [ref=e72]
+              - cell "Entertainment" [ref=e73]:
+                - generic [ref=e74]: Entertainment
+              - cell "₹500.00" [ref=e75]
+            - row "2025-04-07 Pharmacy Health ₹800.00" [ref=e76]:
+              - cell "2025-04-07" [ref=e77]
+              - cell "Pharmacy" [ref=e78]
+              - cell "Health" [ref=e79]:
+                - generic [ref=e80]: Health
+              - cell "₹800.00" [ref=e81]
+            - row "2025-04-05 Electricity bill Bills ₹1,200.00" [ref=e82]:
+              - cell "2025-04-05" [ref=e83]
+              - cell "Electricity bill" [ref=e84]
+              - cell "Bills" [ref=e85]:
+                - generic [ref=e86]: Bills
+              - cell "₹1,200.00" [ref=e87]
+            - row "2025-04-03 Auto to office Transport ₹150.00" [ref=e88]:
+              - cell "2025-04-03" [ref=e89]
+              - cell "Auto to office" [ref=e90]
+              - cell "Transport" [ref=e91]:
+                - generic [ref=e92]: Transport
+              - cell "₹150.00" [ref=e93]
+            - row "2025-04-01 Lunch at cafe Food ₹250.00" [ref=e94]:
+              - cell "2025-04-01" [ref=e95]
+              - cell "Lunch at cafe" [ref=e96]
+              - cell "Food" [ref=e97]:
+                - generic [ref=e98]: Food
+              - cell "₹250.00" [ref=e99]
+      - generic [ref=e100]:
+        - heading "Category Breakdown" [level=2] [ref=e101]:
+          - img [ref=e102]
+          - text: Category Breakdown
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - generic [ref=e107]: Shopping
+            - generic [ref=e110]: ₹2,500
+          - generic [ref=e111]:
+            - generic [ref=e112]: Bills
+            - generic [ref=e115]: ₹1,200
+          - generic [ref=e116]:
+            - generic [ref=e117]: Health
+            - generic [ref=e120]: ₹800
+          - generic [ref=e121]:
+            - generic [ref=e122]: Food
+            - generic [ref=e125]: ₹700
+          - generic [ref=e126]:
+            - generic [ref=e127]: Entertainment
+            - generic [ref=e130]: ₹500
+          - generic [ref=e131]:
+            - generic [ref=e132]: Other
+            - generic [ref=e135]: ₹350
+          - generic [ref=e136]:
+            - generic [ref=e137]: Transport
+            - generic [ref=e140]: ₹150
+  - contentinfo [ref=e141]:
+    - generic [ref=e142]:
+      - generic [ref=e143]: ◈
+      - generic [ref=e144]: Spendly
+      - paragraph [ref=e145]: Track every rupee. Own your finances.
+      - link "Terms and Conditions" [ref=e146] [cursor=pointer]:
+        - /url: /terms
+      - link "Privacy Policy" [ref=e147] [cursor=pointer]:
+        - /url: /privacy

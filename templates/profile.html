@@ -75,9 +75,9 @@
                     <div class="breakdown-row">
                         <span class="breakdown-label">{{ cat.name }}</span>
                         <div class="breakdown-track">
-                            <div class="breakdown-fill cat-bar-{{ cat.name|lower }}" style="width: {{ cat.percentage }}%"></div>
+                            <div class="breakdown-fill cat-bar-{{ cat.name|lower }}" style="width: {{ cat.pct }}%"></div>
                         </div>
-                        <span class="breakdown-amount">₹{{ "{:,.0f}".format(cat.total) }}</span>
+                        <span class="breakdown-amount">₹{{ "{:,.0f}".format(cat.amount) }}</span>
                     </div>
                     {% endfor %}
                 </div>

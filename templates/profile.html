@@ -18,12 +18,38 @@
             </div>
         </div>
 
+        <!-- Date Filter -->
+        <div class="profile-filter">
+            <div class="filter-pills">
+                <a href="{{ url_for('profile', date_from=presets.this_month[0], date_to=presets.this_month[1]) }}"
+                   class="filter-pill {% if active_preset == 'this_month' %}filter-pill--active{% endif %}">This Month</a>
+                <a href="{{ url_for('profile', date_from=presets.last_3_months[0], date_to=presets.last_3_months[1]) }}"
+                   class="filter-pill {% if active_preset == 'last_3_months' %}filter-pill--active{% endif %}">Last 3 Months</a>
+                <a href="{{ url_for('profile', date_from=presets.last_6_months[0], date_to=presets.last_6_months[1]) }}"
+                   class="filter-pill {% if active_preset == 'last_6_months' %}filter-pill--active{% endif %}">Last 6 Months</a>
+                <a href="{{ url_for('profile') }}"
+                   class="filter-pill {% if active_preset == 'all' %}filter-pill--active{% endif %}">All Time</a>
+            </div>
+            <form class="filter-custom {% if active_preset == 'custom' %}filter-custom--active{% endif %}"
+                  method="get" action="{{ url_for('profile') }}">
+                <label class="filter-field">
+                    <span>From</span>
+                    <input type="date" name="date_from" value="{{ date_from }}" class="form-input">
+                </label>
+                <label class="filter-field">
+                    <span>To</span>
+                    <input type="date" name="date_to" value="{{ date_to }}" class="form-input">
+                </label>
+                <button type="submit" class="btn-filter">Apply</button>
+            </form>
+        </div>
+
         <!-- Summary Stats -->
         <div class="profile-stats">
             <div class="stat-card">
                 <span class="stat-label">Total Spent</span>
                 <span class="stat-value">₹{{ "{:,.0f}".format(stats.total_spent) }}</span>
-                <span class="stat-sub">all time</span>
+                <span class="stat-sub">{{ filter_label }}</span>
             </div>
             <div class="stat-card">
                 <span class="stat-label">Transactions</span>
@@ -61,6 +87,10 @@
                                 <td><span class="category-badge cat-{{ tx.category|lower }}">{{ tx.category }}</span></td>
                                 <td class="col-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
                             </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="empty-state">No transactions in this date range.</td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -79,6 +109,8 @@
                         </div>
                         <span class="breakdown-amount">₹{{ "{:,.0f}".format(cat.amount) }}</span>
                     </div>
+                    {% else %}
+                    <p class="empty-state">No spending in this date range.</p>
                     {% endfor %}
                 </div>
             </div>

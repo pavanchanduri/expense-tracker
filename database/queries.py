@@ -36,19 +36,29 @@ def get_user_by_id(user_id):
 # ------------------------------------------------------------------ #
 # Subagent 2 — summary stats                                          #
 # ------------------------------------------------------------------ #
-def get_summary_stats(user_id):
-    """Return {'total_spent', 'transaction_count', 'top_category'}."""
+def get_summary_stats(user_id, date_from=None, date_to=None):
+    """Return {'total_spent', 'transaction_count', 'top_category'}.
+
+    When both date_from and date_to are provided (ISO YYYY-MM-DD strings),
+    results are scoped to expenses with date BETWEEN date_from AND date_to.
+    """
+    where = "WHERE user_id = ?"
+    params = [user_id]
+    if date_from and date_to:
+        where += " AND date BETWEEN ? AND ?"
+        params.extend([date_from, date_to])
+
     db = get_db()
     try:
         totals = db.execute(
             "SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS n "
-            "FROM expenses WHERE user_id = ?",
-            (user_id,),
+            "FROM expenses " + where,
+            params,
         ).fetchone()
         top = db.execute(
-            "SELECT category FROM expenses WHERE user_id = ? "
+            "SELECT category FROM expenses " + where + " "
             "GROUP BY category ORDER BY SUM(amount) DESC LIMIT 1",
-            (user_id,),
+            params,
         ).fetchone()
         return {
             "total_spent": float(totals["total"]),
@@ -62,16 +72,27 @@ def get_summary_stats(user_id):
 # ------------------------------------------------------------------ #
 # Subagent 1 — recent transactions                                    #
 # ------------------------------------------------------------------ #
-def get_recent_transactions(user_id, limit=10):
+def get_recent_transactions(user_id, limit=10, date_from=None, date_to=None):
     """Return list of {'date', 'description', 'category', 'amount'} dicts,
-    newest first, capped at `limit`. Empty list when no expenses."""
+    newest first, capped at `limit`. Empty list when no expenses.
+
+    When both date_from and date_to are provided (ISO YYYY-MM-DD strings),
+    results are scoped to expenses with date BETWEEN date_from AND date_to.
+    """
+    where = "WHERE user_id = ?"
+    params = [user_id]
+    if date_from and date_to:
+        where += " AND date BETWEEN ? AND ?"
+        params.extend([date_from, date_to])
+    params.append(limit)
+
     db = get_db()
     try:
         rows = db.execute(
             "SELECT date, description, category, amount "
-            "FROM expenses WHERE user_id = ? "
+            "FROM expenses " + where + " "
             "ORDER BY date DESC, id DESC LIMIT ?",
-            (user_id, limit),
+            params,
         ).fetchall()
         return [
             {
@@ -89,16 +110,26 @@ def get_recent_transactions(user_id, limit=10):
 # ------------------------------------------------------------------ #
 # Subagent 3 — category breakdown                                     #
 # ------------------------------------------------------------------ #
-def get_category_breakdown(user_id):
+def get_category_breakdown(user_id, date_from=None, date_to=None):
     """Return list of {'name', 'amount', 'pct'} dicts ordered by amount
-    desc; integer pct values sum to 100. Empty list when no expenses."""
+    desc; integer pct values sum to 100. Empty list when no expenses.
+
+    When both date_from and date_to are provided (ISO YYYY-MM-DD strings),
+    results are scoped to expenses with date BETWEEN date_from AND date_to.
+    """
+    where = "WHERE user_id = ?"
+    params = [user_id]
+    if date_from and date_to:
+        where += " AND date BETWEEN ? AND ?"
+        params.extend([date_from, date_to])
+
     db = get_db()
     try:
         rows = db.execute(
             "SELECT category AS name, SUM(amount) AS amount "
-            "FROM expenses WHERE user_id = ? "
+            "FROM expenses " + where + " "
             "GROUP BY category ORDER BY amount DESC",
-            (user_id,),
+            params,
         ).fetchall()
         if not rows:
             return []

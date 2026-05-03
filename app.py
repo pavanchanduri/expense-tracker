@@ -1,3 +1,5 @@
+import math
+import os
 import sqlite3
 from datetime import date, datetime, timedelta
 
@@ -6,14 +8,16 @@ from werkzeug.security import check_password_hash
 
 from database.db import get_db, init_db, seed_db, create_user, get_user_by_email
 from database.queries import (
+    CATEGORIES,
     get_user_by_id,
     get_summary_stats,
     get_recent_transactions,
     get_category_breakdown,
+    insert_expense,
 )
 
 app = Flask(__name__)
-app.secret_key = "dev-secret-key-change-in-production"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
 
 with app.app_context():
     init_db()
@@ -105,6 +109,7 @@ def login():
     if user is None or not check_password_hash(user["password_hash"], password):
         return render_template("login.html", error="Invalid email or password.", email=email)
 
+    session.clear()
     session["user_id"] = user["id"]
     session["user_name"] = user["name"]
     return redirect(url_for("landing"))
@@ -181,9 +186,49 @@ def analytics():
     return render_template("analytics.html")
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    if request.method == "GET":
+        return render_template(
+            "add_expense.html",
+            categories=CATEGORIES,
+            today=date.today().isoformat(),
+        )
+
+    amount_raw = request.form.get("amount", "").strip()
+    category = request.form.get("category", "").strip()
+    date_raw = request.form.get("date", "").strip()
+    description = request.form.get("description", "").strip()
+
+    def _form_with_error(msg):
+        return render_template(
+            "add_expense.html",
+            categories=CATEGORIES,
+            today=date.today().isoformat(),
+            error=msg,
+            amount=amount_raw,
+            category=category,
+            date=date_raw,
+            description=description,
+        )
+
+    try:
+        amount = float(amount_raw)
+    except ValueError:
+        return _form_with_error("Amount must be a number greater than 0.")
+    if not math.isfinite(amount) or amount <= 0:
+        return _form_with_error("Amount must be a number greater than 0.")
+    if category not in CATEGORIES:
+        return _form_with_error("Please choose a valid category.")
+    if _validate_iso_date(date_raw) is None:
+        return _form_with_error("Please enter a valid date (YYYY-MM-DD).")
+
+    insert_expense(session["user_id"], amount, category, date_raw, description)
+    flash("Expense added.")
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/edit")

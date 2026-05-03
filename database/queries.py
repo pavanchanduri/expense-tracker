@@ -7,6 +7,38 @@ parameterised queries, and closes the connection before returning.
 from datetime import datetime
 from database.db import get_db
 
+CATEGORIES = (
+    "Food",
+    "Transport",
+    "Bills",
+    "Health",
+    "Entertainment",
+    "Shopping",
+    "Other",
+)
+
+
+# ------------------------------------------------------------------ #
+# Step 7 — write helper                                                #
+# ------------------------------------------------------------------ #
+def insert_expense(user_id, amount, category, expense_date, description):
+    """Insert a new expense row and return its id.
+
+    `description` is trimmed, capped at 200 chars, and stored as NULL when blank.
+    """
+    cleaned = (description or "").strip()[:200] or None
+    db = get_db()
+    try:
+        cursor = db.execute(
+            "INSERT INTO expenses (user_id, amount, category, date, description) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (user_id, amount, category, expense_date, cleaned),
+        )
+        db.commit()
+        return cursor.lastrowid
+    finally:
+        db.close()
+
 
 # ------------------------------------------------------------------ #
 # Subagent 2 — user info                                              #

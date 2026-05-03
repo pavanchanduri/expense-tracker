@@ -152,6 +152,10 @@ def profile():
     filter_label = preset_labels.get(active_preset) or f"{date_from} – {date_to}"
 
     user = get_user_by_id(session["user_id"])
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
     stats = get_summary_stats(session["user_id"], date_from=date_from, date_to=date_to)
     transactions = get_recent_transactions(session["user_id"], date_from=date_from, date_to=date_to)
     categories = get_category_breakdown(session["user_id"], date_from=date_from, date_to=date_to)
@@ -168,6 +172,13 @@ def profile():
         date_from=date_from or "",
         date_to=date_to or "",
     )
+
+
+@app.route("/analytics")
+def analytics():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    return render_template("analytics.html")
 
 
 @app.route("/expenses/add")

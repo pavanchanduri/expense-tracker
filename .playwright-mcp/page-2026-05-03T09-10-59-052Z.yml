@@ -1,0 +1,154 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "◈ Spendly" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e5]: ◈
+        - generic [ref=e6]: Spendly
+      - generic [ref=e7]:
+        - link "Profile" [ref=e8] [cursor=pointer]:
+          - /url: /profile
+        - link "Analytics" [ref=e9] [cursor=pointer]:
+          - /url: /analytics
+        - generic [ref=e10]: Demo User
+        - link "Sign out" [ref=e11] [cursor=pointer]:
+          - /url: /logout
+  - main [ref=e12]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: DU
+        - generic [ref=e17]:
+          - heading "Demo User" [level=1] [ref=e18]
+          - paragraph [ref=e19]:
+            - img [ref=e20]
+            - text: demo@spendly.com
+          - paragraph [ref=e23]:
+            - img [ref=e24]
+            - text: Member since May 2026
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - link "This Month" [ref=e28] [cursor=pointer]:
+            - /url: /profile?date_from=2026-05-01&date_to=2026-05-03
+          - link "Last 3 Months" [ref=e29] [cursor=pointer]:
+            - /url: /profile?date_from=2026-02-02&date_to=2026-05-03
+          - link "Last 6 Months" [ref=e30] [cursor=pointer]:
+            - /url: /profile?date_from=2025-11-04&date_to=2026-05-03
+          - link "All Time" [ref=e31] [cursor=pointer]:
+            - /url: /profile
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - generic [ref=e34]: From
+            - textbox "From" [ref=e35]
+          - generic [ref=e36]:
+            - generic [ref=e37]: To
+            - textbox "To" [ref=e38]
+          - button "Apply" [ref=e39] [cursor=pointer]
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]: Total Spent
+          - generic [ref=e43]: ₹6,200
+          - generic [ref=e44]: all time
+        - generic [ref=e45]:
+          - generic [ref=e46]: Transactions
+          - generic [ref=e47]: "8"
+          - generic [ref=e48]: expenses logged
+        - generic [ref=e49]:
+          - generic [ref=e50]: Top Category
+          - generic [ref=e51]: Shopping
+          - generic [ref=e52]: highest spend
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - heading "Recent Transactions" [level=2] [ref=e55]:
+            - img [ref=e56]
+            - text: Recent Transactions
+          - table [ref=e60]:
+            - rowgroup [ref=e61]:
+              - row "Date Description Category Amount" [ref=e62]:
+                - columnheader "Date" [ref=e63]
+                - columnheader "Description" [ref=e64]
+                - columnheader "Category" [ref=e65]
+                - columnheader "Amount" [ref=e66]
+            - rowgroup [ref=e67]:
+              - row "2026-05-16 Dinner with friends Food ₹450.00" [ref=e68]:
+                - cell "2026-05-16" [ref=e69]
+                - cell "Dinner with friends" [ref=e70]
+                - cell "Food" [ref=e71]:
+                  - generic [ref=e72]: Food
+                - cell "₹450.00" [ref=e73]
+              - row "2026-05-14 Stationery Other ₹350.00" [ref=e74]:
+                - cell "2026-05-14" [ref=e75]
+                - cell "Stationery" [ref=e76]
+                - cell "Other" [ref=e77]:
+                  - generic [ref=e78]: Other
+                - cell "₹350.00" [ref=e79]
+              - row "2026-05-12 New shoes Shopping ₹2,500.00" [ref=e80]:
+                - cell "2026-05-12" [ref=e81]
+                - cell "New shoes" [ref=e82]
+                - cell "Shopping" [ref=e83]:
+                  - generic [ref=e84]: Shopping
+                - cell "₹2,500.00" [ref=e85]
+              - row "2026-05-10 Movie tickets Entertainment ₹500.00" [ref=e86]:
+                - cell "2026-05-10" [ref=e87]
+                - cell "Movie tickets" [ref=e88]
+                - cell "Entertainment" [ref=e89]:
+                  - generic [ref=e90]: Entertainment
+                - cell "₹500.00" [ref=e91]
+              - row "2026-05-08 Pharmacy Health ₹800.00" [ref=e92]:
+                - cell "2026-05-08" [ref=e93]
+                - cell "Pharmacy" [ref=e94]
+                - cell "Health" [ref=e95]:
+                  - generic [ref=e96]: Health
+                - cell "₹800.00" [ref=e97]
+              - row "2026-05-06 Electricity bill Bills ₹1,200.00" [ref=e98]:
+                - cell "2026-05-06" [ref=e99]
+                - cell "Electricity bill" [ref=e100]
+                - cell "Bills" [ref=e101]:
+                  - generic [ref=e102]: Bills
+                - cell "₹1,200.00" [ref=e103]
+              - row "2026-05-04 Auto to office Transport ₹150.00" [ref=e104]:
+                - cell "2026-05-04" [ref=e105]
+                - cell "Auto to office" [ref=e106]
+                - cell "Transport" [ref=e107]:
+                  - generic [ref=e108]: Transport
+                - cell "₹150.00" [ref=e109]
+              - row "2026-05-02 Lunch at cafe Food ₹250.00" [ref=e110]:
+                - cell "2026-05-02" [ref=e111]
+                - cell "Lunch at cafe" [ref=e112]
+                - cell "Food" [ref=e113]:
+                  - generic [ref=e114]: Food
+                - cell "₹250.00" [ref=e115]
+        - generic [ref=e116]:
+          - heading "Category Breakdown" [level=2] [ref=e117]:
+            - img [ref=e118]
+            - text: Category Breakdown
+          - generic [ref=e121]:
+            - generic [ref=e122]:
+              - generic [ref=e123]: Shopping
+              - generic [ref=e126]: ₹2,500
+            - generic [ref=e127]:
+              - generic [ref=e128]: Bills
+              - generic [ref=e131]: ₹1,200
+            - generic [ref=e132]:
+              - generic [ref=e133]: Health
+              - generic [ref=e136]: ₹800
+            - generic [ref=e137]:
+              - generic [ref=e138]: Food
+              - generic [ref=e141]: ₹700
+            - generic [ref=e142]:
+              - generic [ref=e143]: Entertainment
+              - generic [ref=e146]: ₹500
+            - generic [ref=e147]:
+              - generic [ref=e148]: Other
+              - generic [ref=e151]: ₹350
+            - generic [ref=e152]:
+              - generic [ref=e153]: Transport
+              - generic [ref=e156]: ₹150
+  - contentinfo [ref=e157]:
+    - generic [ref=e158]:
+      - generic [ref=e159]: ◈
+      - generic [ref=e160]: Spendly
+      - paragraph [ref=e161]: Track every rupee. Own your finances.
+      - link "Terms and Conditions" [ref=e162] [cursor=pointer]:
+        - /url: /terms
+      - link "Privacy Policy" [ref=e163] [cursor=pointer]:
+        - /url: /privacy

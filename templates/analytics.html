@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — Spendly{% endblock %}
+
+{% block content %}
+<section class="coming-soon-section">
+    <div class="coming-soon-card">
+        <span class="coming-soon-blob coming-soon-blob--tr" aria-hidden="true"></span>
+        <span class="coming-soon-blob coming-soon-blob--bl" aria-hidden="true"></span>
+
+        <div class="coming-soon-icon">
+            <i data-lucide="clock"></i>
+        </div>
+
+        <span class="coming-soon-badge">Coming Soon</span>
+
+        <h1 class="coming-soon-title">Advanced Analytics</h1>
+
+        <p class="coming-soon-body">
+            We're working on powerful insights and visualizations
+            to help you understand your spending patterns better.
+        </p>
+
+        <div class="coming-soon-dots" aria-hidden="true">
+            <span class="coming-soon-dot"></span>
+            <span class="coming-soon-dot"></span>
+            <span class="coming-soon-dot coming-soon-dot--active"></span>
+        </div>
+
+        <p class="coming-soon-footer">We're crafting something special</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    lucide.createIcons();
+</script>
+{% endblock %}

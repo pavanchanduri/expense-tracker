@@ -16,6 +16,7 @@
                 <p class="profile-email"><i data-lucide="mail"></i> {{ user.email }}</p>
                 <p class="profile-since"><i data-lucide="calendar"></i> Member since {{ user.member_since }}</p>
             </div>
+            <a href="{{ url_for('add_expense') }}" class="btn-primary profile-add-btn">+ Add Expense</a>
         </div>
 
         <!-- Date Filter -->

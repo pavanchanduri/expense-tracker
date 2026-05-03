@@ -21,6 +21,7 @@
             </a>
             <div class="nav-links">
                 {% if session.get('user_id') %}
+                <a href="{{ url_for('add_expense') }}" class="{% if request.endpoint == 'add_expense' %}nav-active{% endif %}">Add Expense</a>
                 <a href="{{ url_for('profile') }}" class="{% if request.endpoint == 'profile' %}nav-active{% endif %}">Profile</a>
                 <a href="{{ url_for('analytics') }}" class="{% if request.endpoint == 'analytics' %}nav-active{% endif %}">Analytics</a>
                 <span class="nav-user">{{ session.get('user_name', 'User') }}</span>
@@ -38,7 +39,10 @@
     <div class="flash-container">
         {# uncategorised flash() defaults to category 'message' — render as success #}
         {% for category, message in messages %}
-        <div class="flash-{{ category if category != 'message' else 'success' }}">{{ message }}</div>
+        <div class="flash flash-{{ category if category != 'message' else 'success' }}" role="status">
+            <span class="flash-text">{{ message }}</span>
+            <button type="button" class="flash-close" aria-label="Dismiss notification">&times;</button>
+        </div>
         {% endfor %}
     </div>
     {% endif %}

@@ -440,9 +440,13 @@ a { color: inherit; text-decoration: none; }
 }
 
 .flash-container {
-    max-width: 440px;
-    margin: 1.5rem auto 0;
-    padding: 0 1rem;
+    position: fixed;
+    top: 5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: min(420px, calc(100vw - 3rem));
+    pointer-events: none;
 }
 
 .flash {
@@ -452,8 +456,16 @@ a { color: inherit; text-decoration: none; }
     border-radius: var(--radius-sm);
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
-    margin-bottom: 1.25rem;
-    transition: opacity 0.3s ease;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 10px -3px rgba(0, 0, 0, 0.08);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: auto;
+    animation: flash-slide-in 0.3s ease-out;
+}
+
+@keyframes flash-slide-in {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .flash-text { flex: 1; }
@@ -478,10 +490,6 @@ a { color: inherit; text-decoration: none; }
     background: var(--success-light);
     color: var(--success);
     border: 1px solid var(--success);
-    border-radius: var(--radius-sm);
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-    margin-bottom: 1.25rem;
 }
 
 .form-group { margin-bottom: 1.25rem; }
@@ -1189,10 +1197,6 @@ a { color: inherit; text-decoration: none; }
     background: var(--danger-light);
     color: var(--danger);
     border: 1px solid var(--danger);
-    border-radius: var(--radius-sm);
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-    margin-bottom: 1.25rem;
 }
 
 /* ------------------------------------------------------------------ */

@@ -78,6 +78,7 @@
                                 <th>Description</th>
                                 <th>Category</th>
                                 <th class="col-amount">Amount</th>
+                                <th class="col-actions"><span class="sr-only">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -87,10 +88,17 @@
                                 <td>{{ tx.description }}</td>
                                 <td><span class="category-badge cat-{{ tx.category|lower }}">{{ tx.category }}</span></td>
                                 <td class="col-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
+                                <td class="col-actions">
+                                    <a href="{{ url_for('edit_expense', id=tx.id) }}"
+                                       class="row-action"
+                                       aria-label="Edit expense">
+                                        <i data-lucide="pencil"></i>
+                                    </a>
+                                </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="4" class="empty-state">No transactions in this date range.</td>
+                                <td colspan="5" class="empty-state">No transactions in this date range.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

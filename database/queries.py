@@ -41,6 +41,57 @@ def insert_expense(user_id, amount, category, expense_date, description):
 
 
 # ------------------------------------------------------------------ #
+# Step 8 — read + update helpers                                       #
+# ------------------------------------------------------------------ #
+def get_expense_by_id(expense_id, user_id):
+    """Return the expense row as a dict scoped to the owning user, or None.
+
+    Scoping by `user_id` ensures a logged-in user cannot read another user's
+    expense by guessing its id.
+    """
+    db = get_db()
+    try:
+        row = db.execute(
+            "SELECT id, user_id, amount, category, date, description "
+            "FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "id": row["id"],
+            "user_id": row["user_id"],
+            "amount": float(row["amount"]),
+            "category": row["category"],
+            "date": row["date"],
+            "description": row["description"],
+        }
+    finally:
+        db.close()
+
+
+def update_expense(expense_id, user_id, amount, category, expense_date, description):
+    """Update an expense the user owns. Returns the number of rows affected.
+
+    Returns 0 when the row does not exist or belongs to another user, so the
+    caller can detect ownership mismatches without a separate read.
+    """
+    cleaned = (description or "").strip()[:200] or None
+    db = get_db()
+    try:
+        cursor = db.execute(
+            "UPDATE expenses "
+            "SET amount = ?, category = ?, date = ?, description = ? "
+            "WHERE id = ? AND user_id = ?",
+            (amount, category, expense_date, cleaned, expense_id, user_id),
+        )
+        db.commit()
+        return cursor.rowcount
+    finally:
+        db.close()
+
+
+# ------------------------------------------------------------------ #
 # Subagent 2 — user info                                              #
 # ------------------------------------------------------------------ #
 def get_user_by_id(user_id):
@@ -121,15 +172,18 @@ def get_recent_transactions(user_id, limit=10, date_from=None, date_to=None):
     db = get_db()
     try:
         rows = db.execute(
-            "SELECT date, description, category, amount "
+            "SELECT id, date, description, category, amount "
             "FROM expenses " + where + " "
             "ORDER BY date DESC, id DESC LIMIT ?",
             params,
         ).fetchall()
         return [
             {
+                "id": row["id"],
                 "date": row["date"],
-                "description": row["description"] if row["description"] is not None else "",
+                "description": (
+                    row["description"] if row["description"] is not None else ""
+                ),
                 "category": row["category"],
                 "amount": row["amount"],
             }

@@ -94,6 +94,13 @@
                                        aria-label="Edit ₹{{ '{:,.2f}'.format(tx.amount) }} expense on {{ tx.date }}">
                                         <i data-lucide="pencil"></i>
                                     </a>
+                                    <button type="button"
+                                            class="row-action row-action--danger js-delete-btn"
+                                            data-delete-url="{{ url_for('delete_expense', expense_id=tx.id) }}"
+                                            data-delete-label="₹{{ '{:,.2f}'.format(tx.amount) }} expense on {{ tx.date }}"
+                                            aria-label="Delete ₹{{ '{:,.2f}'.format(tx.amount) }} expense on {{ tx.date }}">
+                                        <i data-lucide="trash-2"></i>
+                                    </button>
                                 </td>
                             </tr>
                             {% else %}
@@ -128,10 +135,63 @@
 
     </div>
 </section>
+
+<!-- Delete confirmation modal -->
+<div id="deleteModal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="deleteModalTitle">
+    <div class="modal-box modal-box--confirm">
+        <h2 id="deleteModalTitle" class="modal-confirm-title">Delete this expense?</h2>
+        <p class="modal-confirm-body">
+            You're about to delete <span id="deleteModalTarget" class="modal-confirm-target">this expense</span>.
+            This action cannot be undone.
+        </p>
+        <form id="deleteModalForm" method="POST" action="" class="modal-confirm-actions">
+            <button type="button" class="btn-secondary" id="deleteModalCancel">Cancel</button>
+            <button type="submit" class="btn-danger">Delete expense</button>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     lucide.createIcons();
+</script>
+<script>
+    (function () {
+        var modal      = document.getElementById('deleteModal');
+        var modalForm  = document.getElementById('deleteModalForm');
+        var modalTarget = document.getElementById('deleteModalTarget');
+        var cancelBtn  = document.getElementById('deleteModalCancel');
+
+        function openModal(url, label) {
+            modalForm.action = url;
+            modalTarget.textContent = label || 'this expense';
+            modal.classList.add('is-open');
+            modal.removeAttribute('aria-hidden');
+            cancelBtn.focus();
+        }
+
+        function closeModal() {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            modalForm.action = '';
+        }
+
+        document.querySelectorAll('.js-delete-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                openModal(btn.dataset.deleteUrl, btn.dataset.deleteLabel);
+            });
+        });
+
+        cancelBtn.addEventListener('click', closeModal);
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeModal();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+        });
+    })();
 </script>
 {% endblock %}

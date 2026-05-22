@@ -97,6 +97,27 @@ def update_expense(expense_id, user_id, amount, category, expense_date, descript
 
 
 # ------------------------------------------------------------------ #
+# Step 9 — delete helper                                              #
+# ------------------------------------------------------------------ #
+def delete_expense(expense_id, user_id):
+    """Delete an expense the user owns. Returns the number of rows affected.
+
+    Returns 0 when the row does not exist or belongs to another user, so the
+    caller can detect ownership mismatches without a separate read.
+    """
+    db = get_db()
+    try:
+        cursor = db.execute(
+            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+            (expense_id, user_id),
+        )
+        db.commit()
+        return cursor.rowcount
+    finally:
+        db.close()
+
+
+# ------------------------------------------------------------------ #
 # Subagent 2 — user info                                              #
 # ------------------------------------------------------------------ #
 def get_user_by_id(user_id):

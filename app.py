@@ -17,6 +17,7 @@ from database.queries import (
     insert_expense,
     get_expense_by_id,
     update_expense,
+    delete_expense as delete_expense_query,
 )
 
 MAX_AMOUNT = 10_000_000  # ₹1 crore; reject larger inputs server-side
@@ -324,9 +325,17 @@ def edit_expense(expense_id):
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:expense_id>/delete")
+@app.route("/expenses/<int:expense_id>/delete", methods=["POST"])
 def delete_expense(expense_id):
-    return "Delete expense — coming in Step 9"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    rows_affected = delete_expense_query(expense_id, session["user_id"])
+    if rows_affected == 0:
+        flash("Expense not found.", "error")
+    else:
+        flash("Expense deleted.")
+    return redirect(url_for("profile"))
 
 
 @app.route("/terms")

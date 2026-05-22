@@ -1,5 +1,6 @@
 import math
 import os
+import secrets
 import sqlite3
 from datetime import date, datetime, timedelta
 
@@ -18,8 +19,16 @@ from database.queries import (
     update_expense,
 )
 
+MAX_AMOUNT = 10_000_000  # ₹1 crore; reject larger inputs server-side
+
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
+
+_secret_key = os.environ.get("SECRET_KEY")
+if not _secret_key:
+    if os.environ.get("FLASK_ENV") == "production":
+        raise RuntimeError("SECRET_KEY environment variable is required in production.")
+    _secret_key = secrets.token_hex(32)
+app.secret_key = _secret_key
 
 with app.app_context():
     init_db()
@@ -53,6 +62,26 @@ def _resolve_presets(today):
         "last_3_months": ((today - timedelta(days=90)).isoformat(), today.isoformat()),
         "last_6_months": ((today - timedelta(days=180)).isoformat(), today.isoformat()),
     }
+
+
+def _validate_expense_form(amount_raw, category, date_raw):
+    """Validate add/edit expense form fields. Return (amount_float, error_msg).
+
+    `error_msg` is None on success; on failure `amount_float` is None.
+    """
+    try:
+        amount = float(amount_raw)
+    except ValueError:
+        return None, "Amount must be a number greater than 0."
+    if not math.isfinite(amount) or amount <= 0:
+        return None, "Amount must be a number greater than 0."
+    if amount > MAX_AMOUNT:
+        return None, "Amount cannot exceed ₹1,00,00,000."
+    if category not in CATEGORIES:
+        return None, "Please choose a valid category."
+    if _validate_iso_date(date_raw) is None:
+        return None, "Please enter a valid date (YYYY-MM-DD)."
+    return amount, None
 
 
 # ------------------------------------------------------------------ #
@@ -234,28 +263,21 @@ def add_expense():
             description=description,
         )
 
-    try:
-        amount = float(amount_raw)
-    except ValueError:
-        return _form_with_error("Amount must be a number greater than 0.")
-    if not math.isfinite(amount) or amount <= 0:
-        return _form_with_error("Amount must be a number greater than 0.")
-    if category not in CATEGORIES:
-        return _form_with_error("Please choose a valid category.")
-    if _validate_iso_date(date_raw) is None:
-        return _form_with_error("Please enter a valid date (YYYY-MM-DD).")
+    amount, error = _validate_expense_form(amount_raw, category, date_raw)
+    if error:
+        return _form_with_error(error)
 
     insert_expense(session["user_id"], amount, category, date_raw, description)
     flash("Expense added.")
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
-def edit_expense(id):
+@app.route("/expenses/<int:expense_id>/edit", methods=["GET", "POST"])
+def edit_expense(expense_id):
     if not session.get("user_id"):
         return redirect(url_for("login"))
 
-    expense = get_expense_by_id(id, session["user_id"])
+    expense = get_expense_by_id(expense_id, session["user_id"])
     if expense is None:
         flash("Expense not found.", "error")
         return redirect(url_for("profile"))
@@ -265,6 +287,10 @@ def edit_expense(id):
             "edit_expense.html",
             expense=expense,
             categories=CATEGORIES,
+            amount=expense["amount"],
+            category=expense["category"],
+            date=expense["date"],
+            description=expense["description"] or "",
         )
 
     amount_raw = request.form.get("amount", "").strip()
@@ -284,24 +310,22 @@ def edit_expense(id):
             description=description,
         )
 
-    try:
-        amount = float(amount_raw)
-    except ValueError:
-        return _form_with_error("Amount must be a number greater than 0.")
-    if not math.isfinite(amount) or amount <= 0:
-        return _form_with_error("Amount must be a number greater than 0.")
-    if category not in CATEGORIES:
-        return _form_with_error("Please choose a valid category.")
-    if _validate_iso_date(date_raw) is None:
-        return _form_with_error("Please enter a valid date (YYYY-MM-DD).")
+    amount, error = _validate_expense_form(amount_raw, category, date_raw)
+    if error:
+        return _form_with_error(error)
 
-    update_expense(id, session["user_id"], amount, category, date_raw, description)
+    rows_affected = update_expense(
+        expense_id, session["user_id"], amount, category, date_raw, description
+    )
+    if rows_affected == 0:
+        flash("Expense not found.", "error")
+        return redirect(url_for("profile"))
     flash("Expense updated.")
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/delete")
-def delete_expense(id):
+@app.route("/expenses/<int:expense_id>/delete")
+def delete_expense(expense_id):
     return "Delete expense — coming in Step 9"
 
 
@@ -316,4 +340,5 @@ def privacy():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() in ("1", "true", "yes")
+    app.run(debug=debug, port=5001)

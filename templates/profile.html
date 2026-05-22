@@ -89,9 +89,9 @@
                                 <td><span class="category-badge cat-{{ tx.category|lower }}">{{ tx.category }}</span></td>
                                 <td class="col-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
                                 <td class="col-actions">
-                                    <a href="{{ url_for('edit_expense', id=tx.id) }}"
+                                    <a href="{{ url_for('edit_expense', expense_id=tx.id) }}"
                                        class="row-action"
-                                       aria-label="Edit expense">
+                                       aria-label="Edit ₹{{ '{:,.2f}'.format(tx.amount) }} expense on {{ tx.date }}">
                                         <i data-lucide="pencil"></i>
                                     </a>
                                 </td>

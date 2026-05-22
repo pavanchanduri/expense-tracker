@@ -18,6 +18,11 @@ CATEGORIES = (
 )
 
 
+def _clean_description(value):
+    """Trim, cap at 200 chars, and return None when the result is blank."""
+    return (value or "").strip()[:200] or None
+
+
 # ------------------------------------------------------------------ #
 # Step 7 — write helper                                                #
 # ------------------------------------------------------------------ #
@@ -26,7 +31,7 @@ def insert_expense(user_id, amount, category, expense_date, description):
 
     `description` is trimmed, capped at 200 chars, and stored as NULL when blank.
     """
-    cleaned = (description or "").strip()[:200] or None
+    cleaned = _clean_description(description)
     db = get_db()
     try:
         cursor = db.execute(
@@ -76,7 +81,7 @@ def update_expense(expense_id, user_id, amount, category, expense_date, descript
     Returns 0 when the row does not exist or belongs to another user, so the
     caller can detect ownership mismatches without a separate read.
     """
-    cleaned = (description or "").strip()[:200] or None
+    cleaned = _clean_description(description)
     db = get_db()
     try:
         cursor = db.execute(
@@ -156,7 +161,7 @@ def get_summary_stats(user_id, date_from=None, date_to=None):
 # Subagent 1 — recent transactions                                    #
 # ------------------------------------------------------------------ #
 def get_recent_transactions(user_id, limit=10, date_from=None, date_to=None):
-    """Return list of {'date', 'description', 'category', 'amount'} dicts,
+    """Return list of {'id', 'date', 'description', 'category', 'amount'} dicts,
     newest first, capped at `limit`. Empty list when no expenses.
 
     When both date_from and date_to are provided (ISO YYYY-MM-DD strings),

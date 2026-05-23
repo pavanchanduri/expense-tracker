@@ -1,10 +1,22 @@
+import html
+import io
 import math
 import os
+import re
 import secrets
 import sqlite3
 from datetime import date, datetime, timedelta
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    session,
+    send_file,
+)
 from werkzeug.security import check_password_hash
 
 from database.db import get_db, init_db, seed_db, create_user, get_user_by_email
@@ -18,6 +30,7 @@ from database.queries import (
     get_expense_by_id,
     update_expense,
     delete_expense as delete_expense_query,
+    get_expenses_for_export,
 )
 
 MAX_AMOUNT = 10_000_000  # ₹1 crore; reject larger inputs server-side
@@ -83,6 +96,287 @@ def _validate_expense_form(amount_raw, category, date_raw):
     if _validate_iso_date(date_raw) is None:
         return None, "Please enter a valid date (YYYY-MM-DD)."
     return amount, None
+
+
+# ------------------------------------------------------------------ #
+# Export helpers (Step 10)                                            #
+# ------------------------------------------------------------------ #
+
+FONTS_DIR = os.path.join(os.path.dirname(__file__), "static", "fonts")
+PDF_FONT_REGULAR = "DejaVuSans"
+PDF_FONT_BOLD = "DejaVuSans-Bold"
+
+XLSX_MIMETYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+# Export design tokens. ReportLab/openpyxl can't read CSS variables, so we
+# mirror the matching CSS tokens (--border, --paper, --ink-muted) here.
+PDF_COLOR_HEADER_BG = "#e4e1da"
+PDF_COLOR_ROW_ALT = "#f7f6f3"
+PDF_COLOR_MUTED = "#6b6b6b"
+XLSX_COLOR_HEADER_BG = "E4E1DA"  # openpyxl wants hex without the leading #
+
+# Excel treats a cell that starts with one of these as a formula. Prefixing
+# user-supplied text that starts with these characters with a leading
+# apostrophe forces Excel/LibreOffice/Sheets to render it as a literal string
+# instead of evaluating it (defeats =HYPERLINK("…") and similar payloads).
+_XLSX_FORMULA_TRIGGERS = ("=", "+", "-", "@")
+
+
+def _safe_xlsx_string(value):
+    """Defang any string that Excel would interpret as a formula."""
+    s = value or ""
+    if s.startswith(_XLSX_FORMULA_TRIGGERS):
+        return "'" + s
+    return s
+
+
+def _register_pdf_fonts():
+    """Idempotently register the DejaVu fonts so the rupee glyph renders."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    if PDF_FONT_REGULAR not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(
+            TTFont(PDF_FONT_REGULAR, os.path.join(FONTS_DIR, "DejaVuSans.ttf"))
+        )
+        pdfmetrics.registerFont(
+            TTFont(PDF_FONT_BOLD, os.path.join(FONTS_DIR, "DejaVuSans-Bold.ttf"))
+        )
+
+
+def _slugify_name(value):
+    """ASCII-only, lowercase, hyphen-joined; safe to use in a filename."""
+    ascii_only = (value or "").encode("ascii", "ignore").decode("ascii").lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_only).strip("-")
+    return slug or "user"
+
+
+def _resolve_export_range(req):
+    """Return (date_from, date_to) for an export request.
+
+    Mirrors the both-or-neither branching in profile() so the export's active
+    range matches what the user sees on /profile.
+    """
+    date_from = _validate_iso_date(req.args.get("date_from", "").strip())
+    date_to = _validate_iso_date(req.args.get("date_to", "").strip())
+    if (date_from is None) != (date_to is None):
+        return None, None
+    if date_from and date_to and date_from > date_to:
+        return None, None
+    return date_from, date_to
+
+
+# A paired concept: the same active range gets two presentations — a hyphenated
+# slug for the download filename, and a more readable phrase for the PDF body.
+def _filename_range_label(date_from, date_to):
+    if date_from and date_to:
+        return f"{date_from}-to-{date_to}"
+    return "all-time"
+
+
+def _human_range_label(date_from, date_to):
+    if date_from and date_to:
+        return f"{date_from} to {date_to}"
+    return "All time"
+
+
+def _build_pdf(user_name, range_label, expenses):
+    """Render the expense list as a PDF and return a seek-at-0 BytesIO."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
+    _register_pdf_fonts()
+
+    # ReportLab's Paragraph parses XML; escape any user-controlled freetext
+    # before interpolating it into a Paragraph string so a name like
+    # `<img src="…"/>` cannot smuggle markup (or trigger an SSRF) at render time.
+    safe_user_name = html.escape(user_name)
+
+    total = sum(e["amount"] for e in expenses)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "Title",
+        parent=styles["Title"],
+        fontName=PDF_FONT_BOLD,
+        fontSize=18,
+        leading=22,
+        spaceAfter=12,
+    )
+    body_style = ParagraphStyle(
+        "Body",
+        parent=styles["BodyText"],
+        fontName=PDF_FONT_REGULAR,
+        fontSize=11,
+        leading=14,
+    )
+    empty_style = ParagraphStyle(
+        "Empty",
+        parent=body_style,
+        fontName=PDF_FONT_REGULAR,
+        textColor=colors.HexColor(PDF_COLOR_MUTED),
+    )
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=2 * cm,
+        rightMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+        title="Spendly Expense Report",
+    )
+
+    story = [
+        Paragraph("Spendly Expense Report", title_style),
+        Paragraph(f"<b>User:</b> {safe_user_name}", body_style),
+        Paragraph(f"<b>Range:</b> {range_label}", body_style),
+        Paragraph(f"<b>Total spent:</b> ₹{total:,.2f}", body_style),
+        Spacer(1, 0.5 * cm),
+    ]
+
+    if not expenses:
+        story.append(Paragraph("No expenses in this date range.", empty_style))
+    else:
+        header = ["Date", "Description", "Category", "Amount"]
+        rows = [header]
+        for e in expenses:
+            rows.append(
+                [
+                    e["date"],
+                    e["description"],
+                    e["category"],
+                    f"₹{e['amount']:,.2f}",
+                ]
+            )
+        table = Table(
+            rows,
+            colWidths=[2.6 * cm, 7 * cm, 3.2 * cm, 3.2 * cm],
+            repeatRows=1,
+        )
+        table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), PDF_FONT_BOLD),
+                    ("FONTNAME", (0, 1), (-1, -1), PDF_FONT_REGULAR),
+                    ("FONTSIZE", (0, 0), (-1, -1), 10),
+                    (
+                        "BACKGROUND",
+                        (0, 0),
+                        (-1, 0),
+                        colors.HexColor(PDF_COLOR_HEADER_BG),
+                    ),
+                    ("ALIGN", (3, 0), (3, -1), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor(PDF_COLOR_ROW_ALT)],
+                    ),
+                    (
+                        "GRID",
+                        (0, 0),
+                        (-1, -1),
+                        0.25,
+                        colors.HexColor(PDF_COLOR_HEADER_BG),
+                    ),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
+        story.append(table)
+
+    story.append(Spacer(1, 0.6 * cm))
+    story.append(
+        Paragraph(
+            f"Generated {datetime.now():%Y-%m-%d %H:%M}",
+            ParagraphStyle(
+                "Footer",
+                parent=body_style,
+                fontSize=9,
+                textColor=colors.HexColor(PDF_COLOR_MUTED),
+            ),
+        )
+    )
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+
+def _build_xlsx(expenses):
+    """Render the expense list as an .xlsx workbook and return a BytesIO."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Expenses"
+
+    headers = ["Date", "Description", "Category", "Amount (INR)"]
+    ws.append(headers)
+    header_font = Font(bold=True)
+    header_fill = PatternFill(
+        start_color=XLSX_COLOR_HEADER_BG,
+        end_color=XLSX_COLOR_HEADER_BG,
+        fill_type="solid",
+    )
+    for col_idx in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="left")
+    ws.cell(row=1, column=4).alignment = Alignment(horizontal="right")
+
+    for e in expenses:
+        ws.append(
+            [
+                e["date"],
+                _safe_xlsx_string(e["description"]),
+                e["category"],
+                float(e["amount"]),
+            ]
+        )
+
+    last_data_row = len(expenses) + 1  # +1 for header row
+    if expenses:
+        for row in range(2, last_data_row + 1):
+            ws.cell(row=row, column=4).number_format = "#,##0.00"
+            ws.cell(row=row, column=4).alignment = Alignment(horizontal="right")
+
+        total_row = last_data_row + 1
+        ws.cell(row=total_row, column=1, value="Total").font = Font(bold=True)
+        formula_cell = ws.cell(
+            row=total_row,
+            column=4,
+            value=f"=SUM(D2:D{last_data_row})",
+        )
+        formula_cell.font = Font(bold=True)
+        formula_cell.number_format = "#,##0.00"
+        formula_cell.alignment = Alignment(horizontal="right")
+
+    ws.column_dimensions["A"].width = 12
+    ws.column_dimensions["B"].width = 40
+    ws.column_dimensions["C"].width = 16
+    ws.column_dimensions["D"].width = 16
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer
 
 
 # ------------------------------------------------------------------ #
@@ -336,6 +630,58 @@ def delete_expense(expense_id):
     else:
         flash("Expense deleted.")
     return redirect(url_for("profile"))
+
+
+@app.route("/expenses/export/pdf")
+def export_expenses_pdf():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(session["user_id"])
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    date_from, date_to = _resolve_export_range(request)
+    expenses = get_expenses_for_export(session["user_id"], date_from, date_to)
+
+    buffer = _build_pdf(user["name"], _human_range_label(date_from, date_to), expenses)
+    filename = (
+        f"spendly-{_slugify_name(user['name'])}-"
+        f"{_filename_range_label(date_from, date_to)}.pdf"
+    )
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@app.route("/expenses/export/xlsx")
+def export_expenses_xlsx():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(session["user_id"])
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    date_from, date_to = _resolve_export_range(request)
+    expenses = get_expenses_for_export(session["user_id"], date_from, date_to)
+
+    buffer = _build_xlsx(expenses)
+    filename = (
+        f"spendly-{_slugify_name(user['name'])}-"
+        f"{_filename_range_label(date_from, date_to)}.xlsx"
+    )
+    return send_file(
+        buffer,
+        mimetype=XLSX_MIMETYPE,
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 @app.route("/terms")

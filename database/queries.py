@@ -118,6 +118,45 @@ def delete_expense(expense_id, user_id):
 
 
 # ------------------------------------------------------------------ #
+# Step 10 — export helper                                             #
+# ------------------------------------------------------------------ #
+def get_expenses_for_export(user_id, date_from=None, date_to=None):
+    """Return every expense owned by `user_id`, newest first, with no row cap.
+
+    `date_from` / `date_to` follow the Step-6 both-or-neither contract: when
+    only one side is supplied the date filter is ignored. Both must already be
+    validated ISO YYYY-MM-DD strings — this helper trusts its caller.
+    """
+    where = "WHERE user_id = ?"
+    params = [user_id]
+    if date_from and date_to:
+        where += " AND date BETWEEN ? AND ?"
+        params.extend([date_from, date_to])
+
+    db = get_db()
+    try:
+        rows = db.execute(
+            "SELECT date, description, category, amount "
+            "FROM expenses " + where + " "
+            "ORDER BY date DESC, id DESC",
+            params,
+        ).fetchall()
+        return [
+            {
+                "date": row["date"],
+                "description": (
+                    row["description"] if row["description"] is not None else ""
+                ),
+                "category": row["category"],
+                "amount": float(row["amount"]),
+            }
+            for row in rows
+        ]
+    finally:
+        db.close()
+
+
+# ------------------------------------------------------------------ #
 # Subagent 2 — user info                                              #
 # ------------------------------------------------------------------ #
 def get_user_by_id(user_id):

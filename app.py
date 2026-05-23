@@ -35,6 +35,12 @@ from database.queries import (
     update_expense,
     delete_expense as delete_expense_query,
     get_expenses_for_export,
+    get_monthly_trend,
+    get_weekday_breakdown,
+    get_top_expenses,
+    get_period_comparison,
+    get_highest_spending_month,
+    get_earliest_expense_date,
 )
 
 MAX_AMOUNT = 10_000_000  # ₹1 crore; reject larger inputs server-side
@@ -597,7 +603,102 @@ def profile():
 @app.route("/analytics")
 @login_required
 def analytics():
-    return render_template("analytics.html")
+    date_from, date_to, range_error = _resolve_date_range_args(request)
+    if range_error:
+        flash(range_error, "error")
+
+    today = date.today()
+    presets = _resolve_presets(today)
+    if date_from and date_to:
+        active_preset = next(
+            (key for key, bounds in presets.items() if bounds == (date_from, date_to)),
+            "custom",
+        )
+    else:
+        active_preset = "all"
+
+    preset_labels = {
+        "all": "all time",
+        "this_month": "this month",
+        "last_3_months": "last 3 months",
+        "last_6_months": "last 6 months",
+    }
+    filter_label = preset_labels.get(active_preset) or f"{date_from} – {date_to}"
+
+    user = get_user_by_id(session["user_id"])
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    stats = get_summary_stats(user_id, date_from=date_from, date_to=date_to)
+
+    # Avg-per-day uses the active window length, or the user's full history
+    # span on "All Time". Returns 0 when the user has no expenses yet.
+    if date_from and date_to:
+        df = datetime.strptime(date_from, "%Y-%m-%d").date()
+        dt = datetime.strptime(date_to, "%Y-%m-%d").date()
+        days_in_range = (dt - df).days + 1
+    else:
+        earliest = get_earliest_expense_date(user_id)
+        days_in_range = (today - earliest).days + 1 if earliest else 0
+    avg_per_day = stats["total_spent"] / days_in_range if days_in_range else 0.0
+
+    highest_month = get_highest_spending_month(user_id)
+    comparison = get_period_comparison(user_id, today)
+    monthly_trend = get_monthly_trend(user_id, today, months=12)
+    max_month_amount = max((m["amount"] for m in monthly_trend), default=0.0)
+    trend = [
+        {
+            **m,
+            "pct": (
+                int(round(m["amount"] / max_month_amount * 100))
+                if max_month_amount
+                else 0
+            ),
+            "is_peak": max_month_amount > 0 and m["amount"] == max_month_amount,
+        }
+        for m in monthly_trend
+    ]
+
+    weekday_breakdown = get_weekday_breakdown(
+        user_id, date_from=date_from, date_to=date_to
+    )
+    max_weekday_amount = max((w["amount"] for w in weekday_breakdown), default=0.0)
+    weekday_rows = [
+        {
+            **w,
+            "pct": (
+                int(round(w["amount"] / max_weekday_amount * 100))
+                if max_weekday_amount
+                else 0
+            ),
+        }
+        for w in weekday_breakdown
+    ]
+
+    top_expenses = get_top_expenses(
+        user_id, limit=5, date_from=date_from, date_to=date_to
+    )
+
+    return render_template(
+        "analytics.html",
+        user=user,
+        stats=stats,
+        avg_per_day=avg_per_day,
+        highest_month=highest_month,
+        comparison=comparison,
+        monthly_trend=trend,
+        max_month_amount=max_month_amount,
+        weekday_breakdown=weekday_rows,
+        max_weekday_amount=max_weekday_amount,
+        top_expenses=top_expenses,
+        presets=presets,
+        active_preset=active_preset,
+        filter_label=filter_label,
+        date_from=date_from or "",
+        date_to=date_to or "",
+    )
 
 
 @app.route("/expenses/add", methods=["GET", "POST"])

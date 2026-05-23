@@ -572,9 +572,9 @@ a { color: inherit; text-decoration: none; }
 /* ------------------------------------------------------------------ */
 
 .hero {
-    grid-template-columns: 1fr;
     text-align: center;
     max-width: 840px;
+    margin: 0 auto;
     padding: 4.5rem 2rem 5rem;
 }
 
@@ -1416,6 +1416,138 @@ button.row-action {
 }
 
 /* ------------------------------------------------------------------ */
+/* Analytics Page (Step 11)                                            */
+/* ------------------------------------------------------------------ */
+
+.analytics-section {
+    padding: 3rem 2rem;
+}
+
+.analytics-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.analytics-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.analytics-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: var(--ink);
+}
+
+.analytics-subtitle {
+    font-size: 0.95rem;
+    color: var(--ink-muted);
+}
+
+.analytics-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+/* -- Monthly Trend chart -- */
+
+.trend-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.trend-bars {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 0.4rem;
+    height: 180px;
+    padding-top: 1.6rem;
+    align-items: end;
+}
+
+.trend-baseline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--border);
+}
+
+.trend-max-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.trend-col {
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.trend-bar {
+    width: 100%;
+    min-height: 2px;
+    background: var(--border);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    transition: background 0.2s;
+}
+
+.trend-bar--peak {
+    background: var(--accent);
+}
+
+.trend-labels {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 0.4rem;
+}
+
+.trend-month-label {
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.trend-caption {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    font-style: italic;
+}
+
+/* -- Weekday breakdown bar colour -- */
+
+.bar--weekday { background: var(--accent); }
+
+/* -- Top expenses table -- */
+
+.top-expenses-table .top-expense-link {
+    color: var(--ink-soft);
+    border-bottom: 1px dotted var(--border);
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.top-expenses-table .top-expense-link:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* ------------------------------------------------------------------ */
 /* Responsive                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -1431,6 +1563,9 @@ button.row-action {
 
     .features-inner { grid-template-columns: 1fr; }
     .profile-columns { grid-template-columns: 1fr; }
+
+    .analytics-stats { grid-template-columns: repeat(2, 1fr); }
+    .trend-bars { height: 150px; }
 }
 
 @media (max-width: 600px) {
@@ -1465,4 +1600,10 @@ button.row-action {
     .filter-field { flex: 1 1 45%; }
     .filter-field .form-input { width: 100%; }
     .btn-filter { width: 100%; }
+
+    .analytics-section { padding: 2rem 1rem; }
+    .analytics-stats { grid-template-columns: 1fr; }
+    .trend-bars { height: 120px; gap: 0.25rem; }
+    .trend-labels { gap: 0.25rem; }
+    .trend-month-label { font-size: 0.65rem; }
 }

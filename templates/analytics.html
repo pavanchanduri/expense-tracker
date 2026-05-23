@@ -2,32 +2,171 @@
 
 {% block title %}Analytics — Spendly{% endblock %}
 
+{% set CAT_SLUGS = ["food", "transport", "bills", "health", "entertainment", "shopping", "other"] %}
+
 {% block content %}
-<section class="coming-soon-section">
-    <div class="coming-soon-card">
-        <span class="coming-soon-blob coming-soon-blob--tr" aria-hidden="true"></span>
-        <span class="coming-soon-blob coming-soon-blob--bl" aria-hidden="true"></span>
+<section class="analytics-section">
+    <div class="analytics-inner">
 
-        <div class="coming-soon-icon">
-            <i data-lucide="clock"></i>
+        <div class="analytics-header">
+            <h1 class="analytics-title">Spending insights</h1>
+            <p class="analytics-subtitle">Patterns across your expenses — {{ filter_label }}</p>
         </div>
 
-        <span class="coming-soon-badge">Coming Soon</span>
-
-        <h1 class="coming-soon-title">Advanced Analytics</h1>
-
-        <p class="coming-soon-body">
-            We're working on powerful insights and visualizations
-            to help you understand your spending patterns better.
-        </p>
-
-        <div class="coming-soon-dots" aria-hidden="true">
-            <span class="coming-soon-dot"></span>
-            <span class="coming-soon-dot"></span>
-            <span class="coming-soon-dot coming-soon-dot--active"></span>
+        <!-- Date Filter (mirrors /profile) -->
+        <div class="profile-filter">
+            <div class="filter-pills">
+                <a href="{{ url_for('analytics', date_from=presets.this_month[0], date_to=presets.this_month[1]) }}"
+                   class="filter-pill {% if active_preset == 'this_month' %}filter-pill--active{% endif %}">This Month</a>
+                <a href="{{ url_for('analytics', date_from=presets.last_3_months[0], date_to=presets.last_3_months[1]) }}"
+                   class="filter-pill {% if active_preset == 'last_3_months' %}filter-pill--active{% endif %}">Last 3 Months</a>
+                <a href="{{ url_for('analytics', date_from=presets.last_6_months[0], date_to=presets.last_6_months[1]) }}"
+                   class="filter-pill {% if active_preset == 'last_6_months' %}filter-pill--active{% endif %}">Last 6 Months</a>
+                <a href="{{ url_for('analytics') }}"
+                   class="filter-pill {% if active_preset == 'all' %}filter-pill--active{% endif %}">All Time</a>
+            </div>
+            <form class="filter-custom {% if active_preset == 'custom' %}filter-custom--active{% endif %}"
+                  method="get" action="{{ url_for('analytics') }}">
+                <label class="filter-field">
+                    <span>From</span>
+                    <input type="date" name="date_from" value="{{ date_from }}" class="form-input">
+                </label>
+                <label class="filter-field">
+                    <span>To</span>
+                    <input type="date" name="date_to" value="{{ date_to }}" class="form-input">
+                </label>
+                <button type="submit" class="btn-filter">Apply</button>
+            </form>
         </div>
 
-        <p class="coming-soon-footer">We're crafting something special</p>
+        <!-- KPI Strip -->
+        <div class="analytics-stats">
+            <div class="stat-card">
+                <span class="stat-label">Total spent</span>
+                <span class="stat-value">₹{{ "{:,.0f}".format(stats.total_spent) }}</span>
+                <span class="stat-sub">{{ filter_label }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Average per day</span>
+                <span class="stat-value">₹{{ "{:,.0f}".format(avg_per_day) }}</span>
+                <span class="stat-sub">{{ filter_label }}</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Highest month</span>
+                {% if highest_month %}
+                <span class="stat-value">₹{{ "{:,.0f}".format(highest_month.amount) }}</span>
+                <span class="stat-sub">{{ highest_month.label }} · all time</span>
+                {% else %}
+                <span class="stat-value">—</span>
+                <span class="stat-sub">no expenses yet</span>
+                {% endif %}
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">This month vs last</span>
+                {% if comparison.pct_change is none %}
+                <span class="stat-value">—</span>
+                <span class="stat-sub">no spend last month</span>
+                {% else %}
+                {% set is_up = comparison.delta > 0 %}
+                {% set is_flat = comparison.delta == 0 %}
+                <span class="stat-value">
+                    {% if is_up %}+{% elif comparison.delta < 0 %}−{% endif %}₹{{ "{:,.0f}".format(comparison.delta|abs) }}
+                </span>
+                <span class="stat-sub {% if is_up %}stat-danger{% elif not is_flat %}stat-success{% endif %}">
+                    {% if is_up %}+{% elif comparison.delta < 0 %}−{% endif %}{{ "{:.0f}".format(comparison.pct_change|abs) }}% vs last month
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Monthly Trend -->
+        <div class="profile-card">
+            <h2 class="profile-card-title"><i data-lucide="trending-up"></i> Monthly trend</h2>
+            {% if max_month_amount > 0 %}
+            <div class="trend-chart" role="img" aria-label="Monthly spend for the last 12 months">
+                <div class="trend-bars">
+                    <span class="trend-max-label">₹{{ "{:,.0f}".format(max_month_amount) }}</span>
+                    <div class="trend-baseline" aria-hidden="true"></div>
+                    {% for m in monthly_trend %}
+                    <div class="trend-col">
+                        <div class="trend-bar {% if m.is_peak %}trend-bar--peak{% endif %}"
+                             style="height: {{ m.pct }}%"
+                             title="{{ m.label }} — ₹{{ '{:,.0f}'.format(m.amount) }}"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="trend-labels">
+                    {% for m in monthly_trend %}
+                    <span class="trend-month-label">{{ m.label }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <p class="trend-caption">Last 12 months — all categories. Not affected by the filter above.</p>
+            {% else %}
+            <p class="empty-state">No expenses in the last 12 months.</p>
+            {% endif %}
+        </div>
+
+        <!-- Weekday Breakdown + Top Expenses (two-column on desktop) -->
+        <div class="profile-columns">
+
+            <div class="profile-card">
+                <h2 class="profile-card-title"><i data-lucide="calendar-days"></i> Spending by weekday</h2>
+                {% if max_weekday_amount > 0 %}
+                <div class="category-breakdown">
+                    {% for w in weekday_breakdown %}
+                    <div class="breakdown-row">
+                        <span class="breakdown-label">{{ w.weekday }}</span>
+                        <div class="breakdown-track">
+                            <div class="breakdown-fill bar--weekday" style="width: {{ w.pct }}%"></div>
+                        </div>
+                        <span class="breakdown-amount">₹{{ "{:,.0f}".format(w.amount) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="empty-state">No expenses in this range.</p>
+                {% endif %}
+            </div>
+
+            <div class="profile-card">
+                <h2 class="profile-card-title"><i data-lucide="award"></i> Top expenses</h2>
+                <div class="profile-table-wrap">
+                    <table class="profile-table top-expenses-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th class="col-amount">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in top_expenses %}
+                            <tr>
+                                <td class="col-date">{{ tx.date }}</td>
+                                <td>
+                                    <a class="top-expense-link"
+                                       href="{{ url_for('edit_expense', expense_id=tx.id) }}">
+                                        {{ tx.description or "—" }}
+                                    </a>
+                                </td>
+                                {% set cat_slug = tx.category|lower %}
+                                <td><span class="category-badge{% if cat_slug in CAT_SLUGS %} cat-{{ cat_slug }}{% endif %}">{{ tx.category }}</span></td>
+                                <td class="col-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="empty-state">No expenses in this range.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
     </div>
 </section>
 {% endblock %}

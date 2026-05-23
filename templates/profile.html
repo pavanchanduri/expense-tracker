@@ -166,6 +166,7 @@
             This action cannot be undone.
         </p>
         <form id="deleteModalForm" method="POST" action="" class="modal-confirm-actions">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="button" class="btn-secondary" id="deleteModalCancel">Cancel</button>
             <button type="submit" class="btn-danger">Delete expense</button>
         </form>
@@ -174,9 +175,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-    lucide.createIcons();
-</script>
 <script>
     (function () {
         var modal      = document.getElementById('deleteModal');

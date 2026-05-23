@@ -17,55 +17,15 @@ Fixture strategy mirrors tests/test_edit_expense.py:
 - `foreign_expense_id` : An expense row owned by `other_user_id`.
 """
 
-import sqlite3
 import pytest
 
-from app import app as flask_app
-from database.db import init_db
 from database.queries import delete_expense, insert_expense
 from werkzeug.security import generate_password_hash
 
 
 # ------------------------------------------------------------------ #
-# Core fixtures                                                       #
+# Core fixtures — `app`, `client`, `db_conn` live in conftest.py.     #
 # ------------------------------------------------------------------ #
-
-
-@pytest.fixture
-def app(tmp_path, monkeypatch):
-    db_file = str(tmp_path / "test_expenses.db")
-    import database.db as db_module
-
-    monkeypatch.setattr(db_module, "DB_PATH", db_file)
-
-    flask_app.config.update(
-        {
-            "TESTING": True,
-            "SECRET_KEY": "test-secret",
-            "WTF_CSRF_ENABLED": False,
-        }
-    )
-
-    with flask_app.app_context():
-        init_db()
-        yield flask_app
-
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
-
-
-@pytest.fixture
-def db_conn(app):
-    import database.db as db_module
-
-    conn = sqlite3.connect(db_module.DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    yield conn
-    conn.commit()
-    conn.close()
 
 
 def _create_user(db_conn, name, email):

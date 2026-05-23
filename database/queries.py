@@ -1,10 +1,13 @@
-"""Pure SQLite query helpers for the profile page.
+"""Pure SQLite query helpers.
 
 No Flask imports. Each function opens a connection via get_db(), runs
 parameterised queries, and closes the connection before returning.
 """
 
 from datetime import datetime
+
+from werkzeug.security import generate_password_hash
+
 from database.db import get_db
 
 CATEGORIES = (
@@ -16,6 +19,36 @@ CATEGORIES = (
     "Shopping",
     "Other",
 )
+
+
+# ------------------------------------------------------------------ #
+# Users                                                                #
+# ------------------------------------------------------------------ #
+def create_user(name, email, password):
+    """Hash password and insert a new user. Returns the new user id.
+
+    Raises sqlite3.IntegrityError if email is already taken.
+    """
+    db = get_db()
+    try:
+        password_hash = generate_password_hash(password, method="pbkdf2:sha256")
+        cursor = db.execute(
+            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+            (name, email, password_hash),
+        )
+        db.commit()
+        return cursor.lastrowid
+    finally:
+        db.close()
+
+
+def get_user_by_email(email):
+    """Return the user row for the given email, or None if not found."""
+    db = get_db()
+    try:
+        return db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    finally:
+        db.close()
 
 
 def _clean_description(value):

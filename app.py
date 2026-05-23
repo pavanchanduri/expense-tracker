@@ -6,9 +6,11 @@ import re
 import secrets
 import sqlite3
 from datetime import date, datetime, timedelta
+from functools import wraps
 
 from flask import (
     Flask,
+    abort,
     render_template,
     request,
     redirect,
@@ -19,9 +21,11 @@ from flask import (
 )
 from werkzeug.security import check_password_hash
 
-from database.db import get_db, init_db, seed_db, create_user, get_user_by_email
+from database.db import init_db, seed_db
 from database.queries import (
     CATEGORIES,
+    create_user,
+    get_user_by_email,
     get_user_by_id,
     get_summary_stats,
     get_recent_transactions,
@@ -34,6 +38,7 @@ from database.queries import (
 )
 
 MAX_AMOUNT = 10_000_000  # ₹1 crore; reject larger inputs server-side
+MIN_PASSWORD_LENGTH = 8
 
 app = Flask(__name__)
 
@@ -43,6 +48,60 @@ if not _secret_key:
         raise RuntimeError("SECRET_KEY environment variable is required in production.")
     _secret_key = secrets.token_hex(32)
 app.secret_key = _secret_key
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    # Only force HTTPS-only cookies in production; dev runs on plain http://.
+    SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV") == "production",
+)
+
+
+# ------------------------------------------------------------------ #
+# CSRF protection                                                     #
+# ------------------------------------------------------------------ #
+# Hand-rolled to avoid an extra dependency. A random per-session token
+# is generated lazily, injected into every Jinja render via the context
+# processor below, and required on every unsafe HTTP method.
+
+
+def _generate_csrf_token():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_hex(32)
+    return session["_csrf_token"]
+
+
+@app.before_request
+def _csrf_protect():
+    if app.testing:  # tests post forms without a token
+        return
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return
+    expected = session.get("_csrf_token", "")
+    submitted = request.form.get("csrf_token", "")
+    if not expected or not secrets.compare_digest(expected, submitted):
+        abort(400)
+
+
+@app.context_processor
+def _inject_csrf_token():
+    return {"csrf_token": _generate_csrf_token}
+
+
+# ------------------------------------------------------------------ #
+# Auth guard                                                          #
+# ------------------------------------------------------------------ #
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+
+    return wrapper
+
 
 with app.app_context():
     init_db()
@@ -151,19 +210,21 @@ def _slugify_name(value):
     return slug or "user"
 
 
-def _resolve_export_range(req):
-    """Return (date_from, date_to) for an export request.
+def _resolve_date_range_args(req):
+    """Return (date_from, date_to, error) parsed from `date_from`/`date_to` args.
 
-    Mirrors the both-or-neither branching in profile() so the export's active
-    range matches what the user sees on /profile.
+    Both-or-neither semantics: if exactly one side is supplied or one side
+    fails to parse, the filter is dropped entirely. When both parse but the
+    start is after the end we surface an error string so callers can flash
+    it; exports just discard the range silently.
     """
     date_from = _validate_iso_date(req.args.get("date_from", "").strip())
     date_to = _validate_iso_date(req.args.get("date_to", "").strip())
     if (date_from is None) != (date_to is None):
-        return None, None
+        return None, None, None
     if date_from and date_to and date_from > date_to:
-        return None, None
-    return date_from, date_to
+        return None, None, "Start date must be before end date."
+    return date_from, date_to, None
 
 
 # A paired concept: the same active range gets two presentations — a hyphenated
@@ -178,6 +239,16 @@ def _human_range_label(date_from, date_to):
     if date_from and date_to:
         return f"{date_from} to {date_to}"
     return "All time"
+
+
+def _expense_form_fields():
+    """Trimmed dict of the four add/edit-expense form fields."""
+    return {
+        "amount": request.form.get("amount", "").strip(),
+        "category": request.form.get("category", "").strip(),
+        "date": request.form.get("date", "").strip(),
+        "description": request.form.get("description", "").strip(),
+    }
 
 
 def _build_pdf(user_name, range_label, expenses):
@@ -409,6 +480,14 @@ def register():
             "register.html", error="All fields are required.", name=name, email=email
         )
 
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return render_template(
+            "register.html",
+            error=f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
+            name=name,
+            email=email,
+        )
+
     if password != confirm_password:
         return render_template(
             "register.html", error="Passwords do not match.", name=name, email=email
@@ -454,7 +533,7 @@ def login():
 
 
 # ------------------------------------------------------------------ #
-# Placeholder routes — students will implement these                  #
+# Authenticated routes                                                #
 # ------------------------------------------------------------------ #
 
 
@@ -465,18 +544,11 @@ def logout():
 
 
 @app.route("/profile")
+@login_required
 def profile():
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
-
-    date_from = _validate_iso_date(request.args.get("date_from", "").strip())
-    date_to = _validate_iso_date(request.args.get("date_to", "").strip())
-
-    if (date_from is None) != (date_to is None):  # only one of the pair provided
-        date_from = date_to = None
-    elif date_from and date_to and date_from > date_to:
-        date_from = date_to = None
-        flash("Start date must be before end date.", "error")
+    date_from, date_to, range_error = _resolve_date_range_args(request)
+    if range_error:
+        flash(range_error, "error")
 
     presets = _resolve_presets(date.today())
     if date_from and date_to:
@@ -523,17 +595,14 @@ def profile():
 
 
 @app.route("/analytics")
+@login_required
 def analytics():
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
     return render_template("analytics.html")
 
 
 @app.route("/expenses/add", methods=["GET", "POST"])
+@login_required
 def add_expense():
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
-
     if request.method == "GET":
         return render_template(
             "add_expense.html",
@@ -541,37 +610,33 @@ def add_expense():
             today=date.today().isoformat(),
         )
 
-    amount_raw = request.form.get("amount", "").strip()
-    category = request.form.get("category", "").strip()
-    date_raw = request.form.get("date", "").strip()
-    description = request.form.get("description", "").strip()
-
-    def _form_with_error(msg):
+    fields = _expense_form_fields()
+    amount, error = _validate_expense_form(
+        fields["amount"], fields["category"], fields["date"]
+    )
+    if error:
         return render_template(
             "add_expense.html",
             categories=CATEGORIES,
             today=date.today().isoformat(),
-            error=msg,
-            amount=amount_raw,
-            category=category,
-            date=date_raw,
-            description=description,
+            error=error,
+            **fields,
         )
 
-    amount, error = _validate_expense_form(amount_raw, category, date_raw)
-    if error:
-        return _form_with_error(error)
-
-    insert_expense(session["user_id"], amount, category, date_raw, description)
+    insert_expense(
+        session["user_id"],
+        amount,
+        fields["category"],
+        fields["date"],
+        fields["description"],
+    )
     flash("Expense added.")
     return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:expense_id>/edit", methods=["GET", "POST"])
+@login_required
 def edit_expense(expense_id):
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
-
     expense = get_expense_by_id(expense_id, session["user_id"])
     if expense is None:
         flash("Expense not found.", "error")
@@ -588,29 +653,26 @@ def edit_expense(expense_id):
             description=expense["description"] or "",
         )
 
-    amount_raw = request.form.get("amount", "").strip()
-    category = request.form.get("category", "").strip()
-    date_raw = request.form.get("date", "").strip()
-    description = request.form.get("description", "").strip()
-
-    def _form_with_error(msg):
+    fields = _expense_form_fields()
+    amount, error = _validate_expense_form(
+        fields["amount"], fields["category"], fields["date"]
+    )
+    if error:
         return render_template(
             "edit_expense.html",
             expense=expense,
             categories=CATEGORIES,
-            error=msg,
-            amount=amount_raw,
-            category=category,
-            date=date_raw,
-            description=description,
+            error=error,
+            **fields,
         )
 
-    amount, error = _validate_expense_form(amount_raw, category, date_raw)
-    if error:
-        return _form_with_error(error)
-
     rows_affected = update_expense(
-        expense_id, session["user_id"], amount, category, date_raw, description
+        expense_id,
+        session["user_id"],
+        amount,
+        fields["category"],
+        fields["date"],
+        fields["description"],
     )
     if rows_affected == 0:
         flash("Expense not found.", "error")
@@ -620,10 +682,8 @@ def edit_expense(expense_id):
 
 
 @app.route("/expenses/<int:expense_id>/delete", methods=["POST"])
+@login_required
 def delete_expense(expense_id):
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
-
     rows_affected = delete_expense_query(expense_id, session["user_id"])
     if rows_affected == 0:
         flash("Expense not found.", "error")
@@ -633,16 +693,14 @@ def delete_expense(expense_id):
 
 
 @app.route("/expenses/export/pdf")
+@login_required
 def export_expenses_pdf():
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
-
     user = get_user_by_id(session["user_id"])
     if user is None:
         session.clear()
         return redirect(url_for("login"))
 
-    date_from, date_to = _resolve_export_range(request)
+    date_from, date_to, _ = _resolve_date_range_args(request)
     expenses = get_expenses_for_export(session["user_id"], date_from, date_to)
 
     buffer = _build_pdf(user["name"], _human_range_label(date_from, date_to), expenses)
@@ -659,16 +717,14 @@ def export_expenses_pdf():
 
 
 @app.route("/expenses/export/xlsx")
+@login_required
 def export_expenses_xlsx():
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
-
     user = get_user_by_id(session["user_id"])
     if user is None:
         session.clear()
         return redirect(url_for("login"))
 
-    date_from, date_to = _resolve_export_range(request)
+    date_from, date_to, _ = _resolve_date_range_args(request)
     expenses = get_expenses_for_export(session["user_id"], date_from, date_to)
 
     buffer = _build_xlsx(expenses)

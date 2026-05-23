@@ -63,6 +63,9 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        if (window.lucide) lucide.createIcons();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

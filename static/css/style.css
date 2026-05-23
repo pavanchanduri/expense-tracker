@@ -572,9 +572,9 @@ a { color: inherit; text-decoration: none; }
 /* ------------------------------------------------------------------ */
 
 .hero {
-    grid-template-columns: 1fr;
     text-align: center;
     max-width: 840px;
+    margin: 0 auto;
     padding: 4.5rem 2rem 5rem;
 }
 
